@@ -58,8 +58,15 @@
 
     var map = L.map('map', {
       center: [40.701464, -73.973694],
-      zoom: 14,
+      zoom: 11,
       zoomControl: false,
+    });
+
+    // https://stackoverflow.com/questions/22538473/leaflet-center-popup-and-marker-to-the-map
+    map.on('popupopen', function(e) {
+      var px = map.project(e.popup._latlng); // find the pixel location on the map where the popup anchor is
+      px.y -= e.popup._container.clientHeight/2 // find the height of the popup container, divide by 2, subtract from the Y axis of marker location
+      map.panTo(map.unproject(px),{animate: true}); // pan to new center
     });
 
     L.control.zoom({
@@ -73,10 +80,6 @@
     	maxZoom: 20,
     	ext: 'png'
     }).addTo(map);
-
-    function handleCircleMarkerClick(e) {
-      console.log(e.target)
-    }
 
     function addMarkers(rows) {
       const validRows = rows.filter((row) => {
@@ -94,8 +97,6 @@
           properties: row,
         }))
       }
-
-      console.log(JSON.stringify(FC))
 
       L.geoJSON(FC, {
         pointToLayer: function (feature, latlng) {
@@ -115,7 +116,7 @@
                 url: `https://publish.twitter.com/oembed?url=${url}&hide_thread=true`,
                 dataType: "jsonp",
                 success: (data) => {
-                  e.target.bindPopup(data.html)
+                  e.target.bindPopup(data.html);
                   e.target.openPopup();
                   twttr.widgets.load(document.getElementById("map"));
                 }
