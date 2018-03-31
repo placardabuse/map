@@ -2,6 +2,7 @@
 
 <html lang="en">
 <head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta charset="utf-8">
   <title>NYC Placard Abuse Map</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.3.1/dist/leaflet.css" />
@@ -22,20 +23,39 @@
       background: #000;
       color: #fff;
       padding: 8px 30px;
+      max-width: 320px;
+    }
+
+    .big {
+      font-size: 24px;
+      font-weight: 700;
+      text-decoration: underline;
+    }
+
+    .date {
+      text-decoration: underline;
+      font-weight: 700;
     }
 
     h1 {
       margin: 0;
+    }
+
+    a, a:visited {
+      color: #75a6d3;
     }
   </style>
 
 <body>
   <div id="title-container">
     <h1>NYC Placard Abuse</h1>
+    <p>Showing <span id="report-count" class="big"></span> incidents reported between <span id="from-date" class="date"></span> and <span id="to-date" class="date"></span><p>
+    <p>Send a photo to <a href="https://twitter.com/placardabuse">@placardabuse</a> if you spot it in your neighborhood.</p>
   </div>
   <div id="map"></div>
   <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
   <script src="https://unpkg.com/leaflet@1.3.1/dist/leaflet.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.21.0/moment.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/4.3.7/papaparse.min.js"></script>
   <script type="text/javascript">
 
@@ -65,12 +85,12 @@
     // https://stackoverflow.com/questions/22538473/leaflet-center-popup-and-marker-to-the-map
     map.on('popupopen', function(e) {
       var px = map.project(e.popup._latlng); // find the pixel location on the map where the popup anchor is
-      px.y -= e.popup._container.clientHeight/2 // find the height of the popup container, divide by 2, subtract from the Y axis of marker location
+      px.y -= e.popup._container.clientHeight / 1 // find the height of the popup container, divide by 2, subtract from the Y axis of marker location
       map.panTo(map.unproject(px),{animate: true}); // pan to new center
     });
 
     L.control.zoom({
-         position:'topright'
+         position:'bottomleft'
     }).addTo(map);
 
     L.tileLayer('https://stamen-tiles-{s}.a.ssl.fastly.net/toner-lite/{z}/{x}/{y}.{ext}', {
@@ -80,6 +100,8 @@
     	maxZoom: 20,
     	ext: 'png'
     }).addTo(map);
+
+    window.googleDocCallback = function() { return true; };
 
     function addMarkers(rows) {
       const validRows = rows.filter((row) => {
@@ -126,12 +148,26 @@
       }).addTo(map);
     };
 
+    function addStats(rows) {
+      const reportCount = rows.length;
+      const timestamps = rows.map(row => parseInt(row.timestamp))
+        .sort();
+      const fromDate = moment(timestamps[0].toString(), 'X').format('D MMM YYYY');
+      const toDate = moment(timestamps[timestamps.length - 1].toString(), 'X').format('D MMM YYYY');
+
+      $('#report-count').text(reportCount);
+      $('#from-date').text(fromDate);
+      $('#to-date').text(toDate);
+
+    }
+
     $.ajax({
-      url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vTSJFM8-joeiQFOoL-OWhLl19_8If5EBS4VegIfti5RtzduQfu8xxl2HhM2OtVD74M1qtbwHc_WJ2lJ/pub?gid=613323323&single=true&output=csv",
+      url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vTSJFM8-joeiQFOoL-OWhLl19_8If5EBS4VegIfti5RtzduQfu8xxl2HhM2OtVD74M1qtbwHc_WJ2lJ/pub?gid=613323323&single=true&output=csv&callback=googleDocCallback",
       type: "GET"
     }).done((csv) => {
       const rows = Papa.parse(csv, {header: true}).data;
       addMarkers(rows);
+      addStats(rows);
     });
   </script>
 </body>
